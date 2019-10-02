@@ -1,37 +1,71 @@
-## Welcome to GitHub Pages
+### 09-Sep-2019
 
-You can use the [editor on GitHub](https://github.com/101v/postgres_migration_log/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+1.  To support Integrated Security in the connection string for postgreSQL needs to be setup as per [this](https://wiki.postgresql.org/wiki/Configuring_for_single_sign-on_using_SSPI_on_Windows) document.
+2. pg_hba.conf file can be found under the postgreSQL data directory. Usually it is in <InstallationFolder>\PostgreSQL\10\Data
+3. How to set pg_hba.conf file https://dankuida.com/sspi-connection-to-postgres-34e288ea82f3
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### 30-Sep-2019
+1. Update sql script block as follow
 
-### Markdown
+    **Replace**
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+    ```
+    DECLARE @creatorId UNIQUEIDENTIFIER
+    DECLARE @creatorName NVARCHAR(100)
+    DECLARE @createdDate DATETIMEOFFSET(7)
 
-```markdown
-Syntax highlighted code block
+    SET @creatorId = CAST(CAST(0 AS BINARY) AS UNIQUEIDENTIFIER)
+    SET @creatorName = 'Administrator .'
+    SET @createdDate = GETDATE()
 
-# Header 1
-## Header 2
-### Header 3
+    **OTHER SQL SCRIPT**
+    ```
 
-- Bulleted
-- List
+    **with**
+    ```
+    DO $$
+    DECLARE
+        creatorId uuid := '00000000-0000-0000-0000-000000000000'; 
+        creatorName varchar(100) := 'Administrator .';
+        createdDate timestamptz := NOW();
+    BEGIN
+        **OTHER SQL SCRIPT**
+    END $$;
+    ```
+2. Some time in the **INSERT** SQL statement, we do not tend to use **INTO** keywork. SQL Sever still accepts it as a valid statement. However postgreSQL does not, make sure **INTO** is used in the **INSERT** statement
 
-1. Numbered
-2. List
+3. Make sure to add **semicolon (;)** at the end of each statement to ternmate it. It is mandatory in postgres.
 
-**Bold** and _Italic_ and `Code` text
+4. For the scenario where we need to insert data in the indentity column use following
+    ```
+    --SET IDENTITY_INSERT [Admin].[LanguageMaster] ON 
+    -- In posgres there is no need to do this, rather adjust the sequence value at the end of the script.
 
-[Link](url) and ![Image](src)
-```
+    -- At the bottom of this script just reset the sequence id to reflect the lastest max id in the table.
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+    PERFORM setval(pg_get_serial_sequence('admin.languagemaster', 'id'), (select max(id) from Admin.LanguageMaster));
+    ```
+5. PostgreSQL supports **boolean** type in the database, hence some of our column does gets created as boolean. Remeber to repalce bit datat with boolean TRUE/FALSE value
 
-### Jekyll Themes
+6. Remove [ and ] characters from the script. Use double quotation instead if needed.
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/101v/postgres_migration_log/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+7. Reserverd keyword used for column names should always be wrapped in double quotation.
 
-### Support or Contact
+8. Parameters are decleared without @ symbol. Remember to replce them in the script.
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+9. Replaced **TOP n** WITH **LIMIT n** as shown below
+    **Replace**
+    ```
+    SELECT TOP 10 column FROM table
+    ```
+    **with**
+    ```
+    SELECT column FROM table LIMIT 10
+    ```
+
+10. Replace IF statement with IF THEN END IF;
+
+11. Remember postgres treat every name as a lowercase, hence be aware that name ModiferDate and modiferDate are the same. If you have a column Name ModifierDate in the database it will be modifierdate, hehce if you define a variable named modifierName it will conflict in an **UPDATE** statement and in **WHERE** clause. As a result you may get following error
+    ```
+    The error was 42702: column reference "modifiername" is ambiguous
+    ```
