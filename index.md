@@ -69,3 +69,21 @@
     ```
     The error was 42702: column reference "modifiername" is ambiguous
     ```
+12. Trimming function is written differently. For example to trim leading space
+    **Replace**
+    ```
+    SELECT LTRIM(columnX) FROM table
+    ```
+    **with**
+    ```
+    SELECT TRIM(LEADING FROM columnX) FROM table
+    ```
+13. ISNULL, there is no such function in postres use COALESCE to replace null as shown below
+    **Replace**
+    ```
+    SELECT ISNULL(columnX, '') FROM table
+    ```
+    **with**
+    ```
+    SELECT COALESCE(columnX, '') FROM table
+    ```
